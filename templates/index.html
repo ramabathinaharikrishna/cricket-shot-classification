@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CricketAI — Smart Shot Classification</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+  <style>
+    .hero {
+      min-height: calc(100vh - 60px);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      text-align: center; padding: 3rem 2rem;
+      position: relative; overflow: hidden;
+    }
+    .hero-bg {
+      position:absolute; inset:0; pointer-events:none;
+      background:
+        radial-gradient(ellipse 70% 55% at 50% 40%, rgba(0,200,83,.09) 0%, transparent 70%),
+        radial-gradient(ellipse 40% 30% at 85% 80%, rgba(255,193,7,.06) 0%, transparent 60%);
+    }
+    .ring { position:absolute; border-radius:50%; border:1px solid rgba(0,200,83,.07); pointer-events:none; }
+    .ring-1 { width:520px;height:520px;top:-120px;left:-160px; }
+    .ring-2 { width:360px;height:360px;bottom:-90px;right:-90px;border-color:rgba(255,193,7,.06); }
+    .hero-eyebrow { font-size:.72rem;font-weight:700;letter-spacing:5px;text-transform:uppercase;color:var(--green);margin-bottom:1rem;animation:fadeUp .5s ease; }
+    .hero-title { font-family:var(--font-head);font-size:clamp(3.5rem,9vw,7rem);letter-spacing:3px;line-height:.9;animation:fadeUp .5s .1s ease both; }
+    .hero-title em { color:var(--green);font-style:normal; }
+    .hero-title span { color:var(--gold); }
+    .hero-sub { max-width:580px;color:var(--text2);font-size:1.05rem;margin:1.5rem auto;line-height:1.7;animation:fadeUp .5s .2s ease both; }
+    .hero-btns { display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;animation:fadeUp .5s .3s ease both; }
+    .models-strip { background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:1.25rem 2rem;display:flex;align-items:center;justify-content:center;gap:2.5rem;flex-wrap:wrap; }
+    .ms-label { font-size:.68rem;letter-spacing:3px;text-transform:uppercase;color:var(--text3);font-weight:700; }
+    .model-chip { font-family:var(--font-head);font-size:.88rem;letter-spacing:1.5px;color:var(--text2);display:flex;align-items:center;gap:.4rem; }
+    .model-chip::before { content:'';width:7px;height:7px;border-radius:50%;background:var(--green); }
+    .landing-section { padding:4rem 2rem;max-width:1200px;margin:0 auto; }
+    .sec-eye { font-size:.7rem;letter-spacing:4px;text-transform:uppercase;color:var(--green);font-weight:700;text-align:center;margin-bottom:.5rem; }
+    .sec-title { font-family:var(--font-head);font-size:2.4rem;letter-spacing:2px;text-align:center;margin-bottom:2.5rem; }
+    .feat-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1.25rem; }
+    .feat-card { background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.75rem;transition:transform .2s,border-color .2s,box-shadow .2s; }
+    .feat-card:hover { transform:translateY(-5px);border-color:var(--green);box-shadow:var(--glow-g); }
+    .feat-icon { font-size:2.2rem;margin-bottom:.85rem; }
+    .feat-title { font-family:var(--font-head);font-size:1.15rem;letter-spacing:1px;color:var(--text);margin-bottom:.4rem; }
+    .feat-desc { color:var(--text2);font-size:.88rem;line-height:1.6; }
+    .shots-row { display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;margin-top:2rem; }
+    .shot-card { flex:1;min-width:150px;max-width:200px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem 1rem;text-align:center;transition:transform .2s; }
+    .shot-card:hover { transform:translateY(-4px); }
+    .shot-icon { font-size:2.8rem;margin-bottom:.6rem; }
+    .shot-name { font-family:var(--font-head);font-size:1rem;letter-spacing:1px; }
+    .shot-hint { font-size:.75rem;color:var(--text3);margin-top:.3rem; }
+    .shot-card:nth-child(1) { border-color:rgba(0,200,83,.35); } .shot-card:nth-child(1) .shot-name { color:var(--green); }
+    .shot-card:nth-child(2) { border-color:rgba(255,23,68,.35); } .shot-card:nth-child(2) .shot-name { color:#ff6b8a; }
+    .shot-card:nth-child(3) { border-color:rgba(255,193,7,.35); } .shot-card:nth-child(3) .shot-name { color:var(--gold); }
+    .shot-card:nth-child(4) { border-color:rgba(41,121,255,.35); } .shot-card:nth-child(4) .shot-name { color:#82b1ff; }
+    .cta { background:var(--bg2);border-top:1px solid var(--border);border-bottom:1px solid var(--border);padding:4rem 2rem;text-align:center; }
+    .cta h2 { font-family:var(--font-head);font-size:2.5rem;letter-spacing:2px;margin-bottom:1rem; }
+    .cta h2 em { color:var(--green);font-style:normal; }
+    .cta p { color:var(--text2);margin-bottom:2rem; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="{{ url_for('index') }}" class="navbar-brand">
+    <span class="brand-icon">🏏</span>Cricket<span class="brand-accent">AI</span>
+  </a>
+  <div class="nav-links">
+    <a href="{{ url_for('login') }}">Login</a>
+    <a href="{{ url_for('register') }}" class="btn btn-green btn-sm">Register</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="ring ring-1"></div>
+  <div class="ring ring-2"></div>
+  <div class="hero-eyebrow">🏏 Machine Learning · Sports Analytics</div>
+  <h1 class="hero-title">
+    SMART<br/><em>CRICKET</em><br/><span>SHOT AI</span>
+  </h1>
+  <p class="hero-sub">
+    Classify cricket batting shots in real time using accelerometer &amp; gyroscope
+    sensor data — no cameras, no complex infrastructure. Built for academies, schools, and rural players.
+  </p>
+  <div class="hero-btns">
+    <a href="{{ url_for('register') }}" class="btn btn-green btn-lg">Get Started Free</a>
+    <a href="{{ url_for('login') }}"    class="btn btn-outline btn-lg">Sign In</a>
+  </div>
+</section>
+
+<!-- MODELS STRIP -->
+<div class="models-strip">
+  <span class="ms-label">Powered by</span>
+  <span class="model-chip">Decision Tree</span>
+  <span class="model-chip">Random Forest</span>
+  <span class="model-chip">Support Vector Machine</span>
+  <span class="model-chip">K-Nearest Neighbors</span>
+</div>
+
+<!-- FEATURES -->
+<div class="landing-section fade-in">
+  <p class="sec-eye">Why CricketAI</p>
+  <h2 class="sec-title">BUILT FOR EVERY PLAYER</h2>
+  <div class="feat-grid">
+    <div class="feat-card"><div class="feat-icon">💰</div><div class="feat-title">Cost Effective</div><p class="feat-desc">Only a wearable accelerometer + gyroscope. No expensive cameras or setups needed.</p></div>
+    <div class="feat-card"><div class="feat-icon">⚡</div><div class="feat-title">Real-Time</div><p class="feat-desc">Instant shot classification with confidence scores. Zero latency feedback loop.</p></div>
+    <div class="feat-card"><div class="feat-icon">🎯</div><div class="feat-title">Multi-Model</div><p class="feat-desc">4 ML algorithms run simultaneously — compare DT, RF, SVM, and KNN results.</p></div>
+    <div class="feat-card"><div class="feat-icon">📊</div><div class="feat-title">Analytics</div><p class="feat-desc">Track shot distribution and performance trends with interactive charts.</p></div>
+    <div class="feat-card"><div class="feat-icon">👨‍🏫</div><div class="feat-title">Coach Portal</div><p class="feat-desc">Coaches monitor all assigned players' data and identify technique patterns.</p></div>
+    <div class="feat-card"><div class="feat-icon">🌾</div><div class="feat-title">Portable</div><p class="feat-desc">Deploy anywhere — academies, schools, and rural grounds without internet.</p></div>
+  </div>
+</div>
+
+<!-- SHOTS -->
+<div class="landing-section" style="padding-top:0;">
+  <p class="sec-eye">Shot Categories</p>
+  <h2 class="sec-title">4 CLASSIFIED SHOTS</h2>
+  <div class="shots-row">
+    <div class="shot-card"><div class="shot-icon">🏏</div><div class="shot-name">Cover Drive</div><div class="shot-hint">High acc-X, smooth arc</div></div>
+    <div class="shot-card"><div class="shot-icon">💥</div><div class="shot-name">Pull Shot</div><div class="shot-hint">High acc-Z, aggressive</div></div>
+    <div class="shot-card"><div class="shot-icon">↩️</div><div class="shot-name">Sweep</div><div class="shot-hint">Low trajectory, high yaw</div></div>
+    <div class="shot-card"><div class="shot-icon">🛡️</div><div class="shot-name">Defensive</div><div class="shot-hint">Minimal movement</div></div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta">
+  <h2>READY TO <em>ANALYSE</em> YOUR GAME?</h2>
+  <p>Join now and start classifying your cricket shots in minutes.</p>
+  <div class="hero-btns">
+    <a href="{{ url_for('register') }}" class="btn btn-green btn-lg">Create Account</a>
+    <a href="{{ url_for('login') }}"    class="btn btn-gold btn-lg">Login</a>
+  </div>
+</div>
+
+<footer class="footer">
+  🏏 <span class="footer-accent">CricketAI</span> — Smart Shot Classification System &nbsp;|&nbsp; DT · RF · SVM · KNN
+</footer>
+
+</body>
+</html>

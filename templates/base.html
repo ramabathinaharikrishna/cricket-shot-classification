@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}CricketAI{% endblock %} — Smart Shot Classification</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body>
+
+<!-- ══ NAVBAR ══════════════════════════════════════════════════ -->
+<nav class="navbar">
+  <a href="{{ url_for('index') }}" class="navbar-brand">
+    <span class="brand-icon">🏏</span>
+    Cricket<span class="brand-accent">AI</span>
+  </a>
+  <div class="nav-links">
+    {% if session.get('uid') %}
+      <span class="nav-user-name">{{ session.get('user_name','') }}</span>
+      {% if session.get('role') == 'admin' %}
+        <span class="nav-badge red">Admin</span>
+      {% elif session.get('role') == 'coach' %}
+        <span class="nav-badge gold">Coach</span>
+      {% else %}
+        <span class="nav-badge">Player</span>
+      {% endif %}
+      <a href="{{ url_for('logout') }}" class="btn btn-outline btn-sm">Logout</a>
+    {% else %}
+      <a href="{{ url_for('login') }}">Login</a>
+      <a href="{{ url_for('register') }}" class="btn btn-green btn-sm">Register</a>
+    {% endif %}
+  </div>
+</nav>
+
+<!-- ══ PAGE WRAPPER ════════════════════════════════════════════ -->
+<div class="page-wrapper">
+
+  <!-- ── SIDEBAR (authenticated users only) ───────────────── -->
+  {% if session.get('uid') %}
+  <aside class="sidebar">
+
+    {% if session.get('role') == 'admin' %}
+      <div class="sidebar-section">Admin Panel</div>
+      <a href="{{ url_for('admin_dashboard') }}"
+         class="sidebar-link {{ 'active' if request.endpoint == 'admin_dashboard' }}">
+        <span class="s-icon">📊</span> Dashboard
+      </a>
+      <a href="{{ url_for('admin_users') }}"
+         class="sidebar-link {{ 'active' if request.endpoint == 'admin_users' }}">
+        <span class="s-icon">👥</span> Manage Users
+      </a>
+      <a href="{{ url_for('admin_predictions') }}"
+         class="sidebar-link {{ 'active' if request.endpoint == 'admin_predictions' }}">
+        <span class="s-icon">🎯</span> All Predictions
+      </a>
+
+    {% elif session.get('role') == 'coach' %}
+      <div class="sidebar-section">Coach Panel</div>
+      <a href="{{ url_for('coach_dashboard') }}"
+         class="sidebar-link {{ 'active' if request.endpoint == 'coach_dashboard' }}">
+        <span class="s-icon">📊</span> Dashboard
+      </a>
+      <a href="{{ url_for('coach_players') }}"
+         class="sidebar-link {{ 'active' if request.endpoint in ['coach_players','coach_player_history'] }}">
+        <span class="s-icon">👤</span> My Players
+      </a>
+
+    {% elif session.get('role') == 'player' %}
+      <div class="sidebar-section">Player Panel</div>
+      <a href="{{ url_for('player_dashboard') }}"
+         class="sidebar-link {{ 'active' if request.endpoint == 'player_dashboard' }}">
+        <span class="s-icon">📊</span> Dashboard
+      </a>
+      <a href="{{ url_for('player_classify') }}"
+         class="sidebar-link {{ 'active' if request.endpoint == 'player_classify' }}">
+        <span class="s-icon">🏏</span> Classify Shot
+      </a>
+      <a href="{{ url_for('player_history') }}"
+         class="sidebar-link {{ 'active' if request.endpoint == 'player_history' }}">
+        <span class="s-icon">📋</span> My History
+      </a>
+    {% endif %}
+
+    <div class="sidebar-section">Account</div>
+    <a href="{{ url_for('logout') }}" class="sidebar-link">
+      <span class="s-icon">🚪</span> Logout
+    </a>
+
+  </aside>
+  {% endif %}
+
+  <!-- ── MAIN CONTENT ─────────────────────────────────────── -->
+  <main class="main-content">
+
+    <!-- Flash Messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-container">
+          {% for cat, msg in messages %}
+            <div class="alert alert-{{ cat }}">
+              <span class="alert-icon">
+                {% if cat == 'success' %}✓{% elif cat == 'danger' %}✗{% elif cat == 'warning' %}⚠{% else %}ℹ{% endif %}
+              </span>
+              <span>{{ msg }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+
+  </main>
+</div>
+
+<!-- ══ FOOTER ══════════════════════════════════════════════════ -->
+<footer class="footer">
+  🏏 <span class="footer-accent">CricketAI</span> — Smart Shot Classification System
+  &nbsp;|&nbsp; DT · RF · SVM · KNN
+</footer>
+
+<!-- ══ SCRIPTS ═════════════════════════════════════════════════ -->
+<!-- Global JS (always loaded) -->
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+<!-- Chart helpers (loaded on dashboard pages) -->
+{% if request.endpoint in ['admin_dashboard','coach_dashboard','player_dashboard'] %}
+  <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+{% endif %}
+
+<!-- Classification page JS -->
+{% if request.endpoint == 'player_classify' %}
+  <script src="{{ url_for('static', filename='js/classify.js') }}"></script>
+{% endif %}
+
+<!-- Admin panel JS -->
+{% if request.endpoint in ['admin_users','admin_predictions'] %}
+  <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endif %}
+
+{% block scripts %}{% endblock %}
+
+</body>
+</html>

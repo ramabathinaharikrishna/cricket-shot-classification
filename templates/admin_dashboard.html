@@ -1,0 +1,256 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+  /* Chart wrapper — MUST have a fixed height for Chart.js to respect it */
+  .chart-wrap {
+    position: relative;
+    height: 260px;
+    width: 100%;
+  }
+  .chart-wrap-sm {
+    position: relative;
+    height: 160px;
+    width: 100%;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- PAGE HEADER -->
+<div class="page-header fade-in">
+  <h1><span class="accent">ADMIN</span> DASHBOARD</h1>
+  <p class="subtitle">System overview — users, predictions, model performance</p>
+</div>
+
+<!-- STAT CARDS -->
+<div class="stats-grid fade-in-2">
+  <div class="stat-card">
+    <div class="stat-label">Total Users</div>
+    <div class="stat-value">{{ total_users }}</div>
+  </div>
+  <div class="stat-card gold">
+    <div class="stat-label">Coaches</div>
+    <div class="stat-value" style="color:var(--gold);">{{ total_coaches }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Players</div>
+    <div class="stat-value" style="color:var(--green);">{{ total_players }}</div>
+  </div>
+  <div class="stat-card blue">
+    <div class="stat-label">Total Predictions</div>
+    <div class="stat-value" style="color:var(--blue);">{{ total_preds }}</div>
+  </div>
+</div>
+
+<!-- CHARTS ROW 1 -->
+<div class="grid-2 fade-in-3 mb-3">
+
+  <!-- Shot Distribution -->
+  <div class="card">
+    <div class="card-title">🏏 Shot Distribution</div>
+    {% if shot_dist %}
+      <div class="chart-wrap">
+        <canvas id="shotChart"></canvas>
+      </div>
+    {% else %}
+      <div style="height:260px;display:flex;align-items:center;justify-content:center;color:var(--text3);flex-direction:column;gap:.5rem;">
+        <span style="font-size:2rem;">🏏</span>
+        <span>No predictions yet</span>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Model Accuracy -->
+  <div class="card">
+    <div class="card-title">🤖 Model Accuracy (Training)</div>
+    {% if model_accs %}
+      <div class="chart-wrap">
+        <canvas id="modelChart"></canvas>
+      </div>
+    {% else %}
+      <div style="height:260px;display:flex;align-items:center;justify-content:center;color:var(--text3);">
+        No model data
+      </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Daily Activity Chart -->
+<div class="card fade-in-4 mb-3">
+  <div class="card-title">📈 Daily Predictions (Last 7 Days)</div>
+  <div class="chart-wrap-sm">
+    <canvas id="dailyChart"></canvas>
+  </div>
+</div>
+
+<!-- Recent Predictions Table -->
+<div class="card fade-in-4">
+  <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:.5rem;">
+    <span>🎯 Recent Predictions</span>
+    <a href="{{ url_for('admin_predictions') }}" class="btn btn-outline btn-sm">View All →</a>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Player</th>
+          <th>Shot</th>
+          <th>Model</th>
+          <th>Confidence</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in recent_preds %}
+        <tr>
+          <td class="text-mono">{{ p.id }}</td>
+          <td><strong>{{ p.full_name }}</strong></td>
+          <td>
+            {% set sc = 'shot-cover' if 'Cover' in p.predicted_shot else
+                        'shot-pull'  if 'Pull'  in p.predicted_shot else
+                        'shot-sweep' if 'Sweep' in p.predicted_shot else 'shot-def' %}
+            <span class="badge {{ sc }}">{{ p.predicted_shot }}</span>
+          </td>
+          <td class="text-mono text-sm">{{ p.model_used }}</td>
+          <td style="font-family:var(--font-mono);color:var(--green);font-weight:700;">
+            {{ "%.1f"|format(p.confidence) }}%
+          </td>
+          <td class="text-sm text-muted">
+            {{ p.created_at.strftime('%d %b %Y %H:%M') if p.created_at else '—' }}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="6" style="text-align:center;padding:2rem;color:var(--text3);">
+            No predictions yet.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+/* ── DATA FROM FLASK ─────────────────────────────────── */
+const shotData   = {{ shot_dist  | tojson }};
+const modelData  = {{ model_accs | tojson }};
+const dailyData  = {{ daily_data | tojson }};
+
+/* ── CHART DEFAULTS ──────────────────────────────────── */
+const gridColor  = 'rgba(30,42,64,0.9)';
+const tickColor  = '#5a6480';
+const shotColors = ['#00c853','#ff1744','#ffc107','#2979ff'];
+
+const scaleDefaults = {
+  x: { ticks:{color:tickColor,font:{family:'Rajdhani',weight:'600'}},
+       grid:{color:gridColor} },
+  y: { ticks:{color:tickColor,font:{family:'Rajdhani',weight:'600'}},
+       grid:{color:gridColor}, beginAtZero:true }
+};
+
+/* ── DOUGHNUT: Shot Distribution ─────────────────────── */
+{% if shot_dist %}
+new Chart(document.getElementById('shotChart'), {
+  type: 'doughnut',
+  data: {
+    labels: shotData.map(s => s.predicted_shot),
+    datasets:[{
+      data: shotData.map(s => s.cnt),
+      backgroundColor: shotColors,
+      borderColor: '#141929',
+      borderWidth: 3,
+      hoverOffset: 8
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,   /* ← KEY FIX: lets the wrapper div control height */
+    plugins: {
+      legend: {
+        position: 'bottom',
+        labels: { color:'#9ea8c5', padding:16,
+                  font:{family:'Rajdhani',size:13,weight:'600'} }
+      },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.label}: ${ctx.parsed} predictions`
+        }
+      }
+    },
+    cutout: '60%'
+  }
+});
+{% endif %}
+
+/* ── BAR: Model Accuracy ──────────────────────────────── */
+{% if model_accs %}
+new Chart(document.getElementById('modelChart'), {
+  type: 'bar',
+  data: {
+    labels: modelData.map(m => m.model),
+    datasets:[
+      { label:'Test Accuracy %',
+        data: modelData.map(m => m.accuracy),
+        backgroundColor:'rgba(0,200,83,.75)',
+        borderColor:'#00c853', borderWidth:1,
+        borderRadius:4, borderSkipped:false },
+      { label:'CV Accuracy %',
+        data: modelData.map(m => m.cv),
+        backgroundColor:'rgba(255,193,7,.55)',
+        borderColor:'#ffc107', borderWidth:1,
+        borderRadius:4, borderSkipped:false }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels:{ color:'#9ea8c5', font:{family:'Rajdhani',weight:'600'} } }
+    },
+    scales: {
+      ...scaleDefaults,
+      y: { ...scaleDefaults.y, max:100,
+           ticks:{ ...scaleDefaults.y.ticks,
+                   callback: v => v + '%' } }
+    }
+  }
+});
+{% endif %}
+
+/* ── LINE: Daily Predictions ──────────────────────────── */
+new Chart(document.getElementById('dailyChart'), {
+  type: 'line',
+  data: {
+    labels: dailyData.map(d => d.day ? String(d.day).split('T')[0] : ''),
+    datasets:[{
+      label:'Predictions',
+      data: dailyData.map(d => d.cnt),
+      borderColor:'#00c853',
+      backgroundColor:'rgba(0,200,83,.07)',
+      tension:.4, fill:true,
+      pointBackgroundColor:'#00c853',
+      pointBorderColor:'#141929',
+      pointRadius:5, pointHoverRadius:7
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { labels:{ color:'#9ea8c5', font:{family:'Rajdhani',weight:'600'} } }
+    },
+    scales: scaleDefaults
+  }
+});
+</script>
+{% endblock %}

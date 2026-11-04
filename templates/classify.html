@@ -1,0 +1,396 @@
+{% extends "base.html" %}
+{% block title %}Classify Shot{% endblock %}
+
+{% block extra_css %}
+<style>
+  .sensor-section {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  .sensor-title {
+    font-family: var(--font-head);
+    font-size: 1rem;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+  .sensor-title::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+    margin-left: .5rem;
+  }
+  .input-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: .75rem;
+  }
+  @media(max-width:600px){ .input-grid { grid-template-columns: 1fr 1fr; } }
+
+  .feature-input { position: relative; }
+  .feature-input .f-label {
+    font-size: .68rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: .3rem;
+    display: block;
+  }
+  .feature-input .f-axis {
+    position: absolute;
+    right: .75rem;
+    bottom: .65rem;
+    font-family: var(--font-mono);
+    font-size: .7rem;
+    color: var(--green);
+    pointer-events: none;
+  }
+  .feature-input input {
+    padding-right: 2.5rem;
+  }
+
+  /* Sample data buttons */
+  .sample-row {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+  .sample-row span {
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--text3);
+    display: flex;
+    align-items: center;
+  }
+
+  /* Result card */
+  .result-wrapper { animation: fadeUp .4s ease; }
+  .result-main {
+    background: linear-gradient(135deg, rgba(0,200,83,.06), rgba(0,200,83,.02));
+    border: 1px solid var(--green);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    box-shadow: var(--glow-g);
+    margin-bottom: 1.5rem;
+  }
+  .result-label {
+    font-size: .7rem;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--green);
+    font-weight: 700;
+    margin-bottom: .5rem;
+  }
+  .result-shot-name {
+    font-family: var(--font-head);
+    font-size: 3.5rem;
+    letter-spacing: 3px;
+    color: var(--text);
+    line-height: 1;
+  }
+  .result-conf {
+    font-family: var(--font-mono);
+    font-size: 1.3rem;
+    color: var(--gold);
+    margin-top: .75rem;
+  }
+  .result-model {
+    font-size: .8rem;
+    color: var(--text3);
+    margin-top: .4rem;
+    letter-spacing: 1px;
+  }
+
+  /* Proba bars */
+  .proba-row {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: .6rem;
+  }
+  .proba-name {
+    width: 120px;
+    font-size: .82rem;
+    font-weight: 600;
+    color: var(--text2);
+    flex-shrink: 0;
+  }
+  .proba-bar-wrap { flex: 1; background: var(--bg3); border-radius: 4px; height: 8px; overflow:hidden; }
+  .proba-bar-fill { height: 100%; border-radius: 4px; transition: width .8s cubic-bezier(.4,0,.2,1); }
+  .proba-pct {
+    width: 50px;
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: .8rem;
+    color: var(--green);
+    font-weight: 700;
+  }
+
+  /* Model comparison */
+  .model-compare {
+    display: grid;
+    grid-template-columns: repeat(4,1fr);
+    gap: .75rem;
+  }
+  @media(max-width:700px){ .model-compare { grid-template-columns: repeat(2,1fr); } }
+  .mc-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: .75rem;
+    text-align: center;
+  }
+  .mc-card .mc-model {
+    font-size: .65rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--text3);
+    margin-bottom: .3rem;
+    font-weight: 700;
+  }
+  .mc-card .mc-shot {
+    font-family: var(--font-head);
+    font-size: .95rem;
+    letter-spacing: .5px;
+    color: var(--text);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header fade-in">
+  <h1>CLASSIFY <span>SHOT</span></h1>
+  <p>Enter sensor feature values from your bat-mounted accelerometer & gyroscope</p>
+</div>
+
+<!-- Sample data fill buttons -->
+<div class="sample-row fade-in-2">
+  <span>Quick Fill:</span>
+  <button class="btn btn-outline btn-sm" onclick="fillSample('cover')">🏏 Cover Drive</button>
+  <button class="btn btn-outline btn-sm" onclick="fillSample('pull')">💥 Pull Shot</button>
+  <button class="btn btn-outline btn-sm" onclick="fillSample('sweep')">↩️ Sweep</button>
+  <button class="btn btn-outline btn-sm" onclick="fillSample('defensive')">🛡️ Defensive</button>
+</div>
+
+<form method="POST" action="{{ url_for('player_classify') }}">
+
+  <!-- Model Selector -->
+  <div class="card fade-in-2" style="margin-bottom:1.25rem;padding:1.25rem 1.5rem;">
+    <div class="form-group" style="margin:0;">
+      <label class="form-label">🤖 Select Primary Model</label>
+      <select name="model_select" class="form-control" style="max-width:280px;">
+        {% for mn in model_names %}
+          <option value="{{ mn }}">{{ mn }}</option>
+        {% endfor %}
+      </select>
+      <p class="form-hint" style="margin-top:.4rem;">All 4 models will run; this selects the primary result.</p>
+    </div>
+  </div>
+
+  <!-- ACCELEROMETER (mean) -->
+  <div class="sensor-section fade-in-3">
+    <div class="sensor-title">📡 Accelerometer — Mean (m/s²)</div>
+    <div class="input-grid">
+      <div class="feature-input form-group">
+        <label class="f-label">Mean Acc X</label>
+        <input type="number" step="0.01" name="mean_acc_x" class="form-control" placeholder="e.g. 8.50" required/>
+        <span class="f-axis">X</span>
+      </div>
+      <div class="feature-input form-group">
+        <label class="f-label">Mean Acc Y</label>
+        <input type="number" step="0.01" name="mean_acc_y" class="form-control" placeholder="e.g. 3.00" required/>
+        <span class="f-axis">Y</span>
+      </div>
+      <div class="feature-input form-group">
+        <label class="f-label">Mean Acc Z</label>
+        <input type="number" step="0.01" name="mean_acc_z" class="form-control" placeholder="e.g. 4.50" required/>
+        <span class="f-axis">Z</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACCELEROMETER (std) -->
+  <div class="sensor-section fade-in-3">
+    <div class="sensor-title">📡 Accelerometer — Std Dev</div>
+    <div class="input-grid">
+      <div class="feature-input form-group">
+        <label class="f-label">Std Acc X</label>
+        <input type="number" step="0.01" name="std_acc_x" class="form-control" placeholder="e.g. 2.80" required/>
+        <span class="f-axis">X</span>
+      </div>
+      <div class="feature-input form-group">
+        <label class="f-label">Std Acc Y</label>
+        <input type="number" step="0.01" name="std_acc_y" class="form-control" placeholder="e.g. 1.20" required/>
+        <span class="f-axis">Y</span>
+      </div>
+      <div class="feature-input form-group">
+        <label class="f-label">Std Acc Z</label>
+        <input type="number" step="0.01" name="std_acc_z" class="form-control" placeholder="e.g. 1.50" required/>
+        <span class="f-axis">Z</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- GYROSCOPE (mean) -->
+  <div class="sensor-section fade-in-3">
+    <div class="sensor-title">🔄 Gyroscope — Mean (rad/s)</div>
+    <div class="input-grid">
+      <div class="feature-input form-group">
+        <label class="f-label">Mean Gyro X</label>
+        <input type="number" step="0.01" name="mean_gyro_x" class="form-control" placeholder="e.g. 5.20" required/>
+        <span class="f-axis">X</span>
+      </div>
+      <div class="feature-input form-group">
+        <label class="f-label">Mean Gyro Y</label>
+        <input type="number" step="0.01" name="mean_gyro_y" class="form-control" placeholder="e.g. 6.80" required/>
+        <span class="f-axis">Y</span>
+      </div>
+      <div class="feature-input form-group">
+        <label class="f-label">Mean Gyro Z</label>
+        <input type="number" step="0.01" name="mean_gyro_z" class="form-control" placeholder="e.g. 3.50" required/>
+        <span class="f-axis">Z</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- GYROSCOPE (std) -->
+  <div class="sensor-section fade-in-3">
+    <div class="sensor-title">🔄 Gyroscope — Std Dev</div>
+    <div class="input-grid">
+      <div class="feature-input form-group">
+        <label class="f-label">Std Gyro X</label>
+        <input type="number" step="0.01" name="std_gyro_x" class="form-control" placeholder="e.g. 1.50" required/>
+        <span class="f-axis">X</span>
+      </div>
+      <div class="feature-input form-group">
+        <label class="f-label">Std Gyro Y</label>
+        <input type="number" step="0.01" name="std_gyro_y" class="form-control" placeholder="e.g. 1.80" required/>
+        <span class="f-axis">Y</span>
+      </div>
+      <div class="feature-input form-group">
+        <label class="f-label">Std Gyro Z</label>
+        <input type="number" step="0.01" name="std_gyro_z" class="form-control" placeholder="e.g. 1.00" required/>
+        <span class="f-axis">Z</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- DERIVED FEATURES -->
+  <div class="sensor-section fade-in-4">
+    <div class="sensor-title">⚡ Derived Magnitude Features</div>
+    <div class="input-grid">
+      <div class="feature-input form-group">
+        <label class="f-label">Max Acc Magnitude</label>
+        <input type="number" step="0.01" name="max_acc_magnitude" class="form-control" placeholder="e.g. 14.20" required/>
+      </div>
+      <div class="feature-input form-group">
+        <label class="f-label">Min Acc Magnitude</label>
+        <input type="number" step="0.01" name="min_acc_magnitude" class="form-control" placeholder="e.g. 2.00" required/>
+      </div>
+      <div class="feature-input form-group">
+        <label class="f-label">Peak Angular Velocity</label>
+        <input type="number" step="0.01" name="peak_angular_vel" class="form-control" placeholder="e.g. 8.50" required/>
+      </div>
+    </div>
+  </div>
+
+  <button type="submit" class="btn btn-green" style="width:100%;padding:1rem;font-size:1.1rem;margin-bottom:2rem;">
+    🏏 &nbsp; CLASSIFY SHOT
+  </button>
+</form>
+
+<!-- RESULT -->
+{% if result %}
+<div class="result-wrapper">
+  <div class="result-main">
+    <div class="result-label">🎯 Shot Classified</div>
+    <div class="result-shot-name">{{ result.shot | upper }}</div>
+    <div class="result-conf">{{ result.confidence }}% confidence</div>
+    <div class="result-model">via {{ result.model }}</div>
+  </div>
+
+  <div class="grid-2">
+    <!-- Probability breakdown -->
+    <div class="card">
+      <div class="card-title">📊 Probability Breakdown</div>
+      {% for shot, prob in result.proba.items() | sort(attribute='1', reverse=True) %}
+        {% set color = '#00c853' if 'Cover' in shot else
+                       '#ff1744' if 'Pull'  in shot else
+                       '#ffc107' if 'Sweep' in shot else '#2979ff' %}
+        <div class="proba-row">
+          <div class="proba-name">{{ shot }}</div>
+          <div class="proba-bar-wrap">
+            <div class="proba-bar-fill" style="width:{{ prob }}%;background:{{ color }};"></div>
+          </div>
+          <div class="proba-pct">{{ prob }}%</div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- All model comparison -->
+    <div class="card">
+      <div class="card-title">🤖 All Models Verdict</div>
+      <div class="model-compare">
+        {% for mname, mpred in result.all_models.items() %}
+          {% set sc = 'shot-cover' if 'Cover' in mpred else
+                      'shot-pull'  if 'Pull'  in mpred else
+                      'shot-sweep' if 'Sweep' in mpred else 'shot-def' %}
+          <div class="mc-card">
+            <div class="mc-model">{{ mname }}</div>
+            <span class="badge {{ sc }}" style="font-size:.75rem;">{{ mpred }}</span>
+          </div>
+        {% endfor %}
+      </div>
+
+      <div style="margin-top:1.5rem;">
+        <a href="{{ url_for('player_classify') }}" class="btn btn-outline btn-sm">
+          🔄 Classify Another
+        </a>
+        <a href="{{ url_for('player_history') }}" class="btn btn-outline btn-sm" style="margin-left:.5rem;">
+          📋 View History
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+const SAMPLES = {
+  cover:     { mean_acc_x:8.5, mean_acc_y:3.0, mean_acc_z:4.5, std_acc_x:2.8, std_acc_y:1.2, std_acc_z:1.5,
+               mean_gyro_x:5.2, mean_gyro_y:6.8, mean_gyro_z:3.5, std_gyro_x:1.5, std_gyro_y:1.8, std_gyro_z:1.0,
+               max_acc_magnitude:14.2, min_acc_magnitude:2.0, peak_angular_vel:8.5 },
+  pull:      { mean_acc_x:4.0, mean_acc_y:3.5, mean_acc_z:12.0, std_acc_x:1.8, std_acc_y:1.5, std_acc_z:3.2,
+               mean_gyro_x:9.5, mean_gyro_y:8.2, mean_gyro_z:7.0, std_gyro_x:2.8, std_gyro_y:2.5, std_gyro_z:2.2,
+               max_acc_magnitude:19.5, min_acc_magnitude:3.5, peak_angular_vel:14.0 },
+  sweep:     { mean_acc_x:6.8, mean_acc_y:1.5, mean_acc_z:5.5, std_acc_x:2.0, std_acc_y:0.8, std_acc_z:1.8,
+               mean_gyro_x:3.5, mean_gyro_y:4.0, mean_gyro_z:9.5, std_gyro_x:1.0, std_gyro_y:1.2, std_gyro_z:2.8,
+               max_acc_magnitude:12.5, min_acc_magnitude:1.5, peak_angular_vel:10.5 },
+  defensive: { mean_acc_x:1.5, mean_acc_y:1.2, mean_acc_z:2.0, std_acc_x:0.5, std_acc_y:0.4, std_acc_z:0.7,
+               mean_gyro_x:1.8, mean_gyro_y:1.5, mean_gyro_z:2.0, std_gyro_x:0.5, std_gyro_y:0.4, std_gyro_z:0.6,
+               max_acc_magnitude:5.5, min_acc_magnitude:0.8, peak_angular_vel:3.5 }
+};
+function fillSample(shot) {
+  const d = SAMPLES[shot];
+  if (!d) return;
+  Object.entries(d).forEach(([k, v]) => {
+    const el = document.querySelector(`[name="${k}"]`);
+    if (el) el.value = v;
+  });
+}
+</script>
+{% endblock %}

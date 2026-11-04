@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login — CricketAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+  <style>
+    body { display:flex; flex-direction:column; min-height:100vh; }
+    .auth-page {
+      flex:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:2rem;
+      background: radial-gradient(ellipse 60% 50% at 50% 50%, rgba(0,200,83,.07) 0%, transparent 70%);
+    }
+    .auth-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 420px;
+      animation: fadeUp .4s ease;
+      box-shadow: 0 4px 32px rgba(0,0,0,.4);
+    }
+    .auth-logo {
+      font-family: var(--font-head);
+      font-size: 1.9rem;
+      letter-spacing: 2px;
+      color: var(--green);
+      text-align: center;
+      margin-bottom: .25rem;
+    }
+    .auth-logo span { color: var(--gold); }
+    .auth-sub {
+      text-align: center;
+      color: var(--text3);
+      font-size: .82rem;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 2rem;
+    }
+    .auth-title {
+      font-family: var(--font-head);
+      font-size: 1.5rem;
+      letter-spacing: 1.5px;
+      text-align: center;
+      margin-bottom: 1.5rem;
+      color: var(--text);
+    }
+    .auth-footer {
+      text-align: center;
+      color: var(--text3);
+      font-size: .88rem;
+      margin-top: 1.25rem;
+    }
+    .auth-footer a { color: var(--green); font-weight: 600; text-decoration: none; }
+    .auth-footer a:hover { color: #00e676; }
+    .demo-box {
+      background: var(--bg3);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem;
+      margin-top: 1.25rem;
+    }
+    .demo-title {
+      font-size: .65rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text3);
+      margin-bottom: .6rem;
+      font-weight: 700;
+    }
+    .demo-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: .8rem;
+      color: var(--text2);
+      margin-bottom: .3rem;
+    }
+    .demo-row:last-child { margin-bottom: 0; }
+    .demo-row code {
+      font-family: var(--font-mono);
+      font-size: .76rem;
+      color: var(--green);
+      background: rgba(0,200,83,.08);
+      padding: 2px 6px;
+      border-radius: 4px;
+    }
+    .error-msg {
+      background: rgba(255,23,68,.08);
+      border: 1px solid rgba(255,23,68,.3);
+      border-radius: var(--radius);
+      color: #ff6b8a;
+      padding: .75rem 1rem;
+      font-size: .88rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      display: flex;
+      align-items: center;
+      gap: .5rem;
+    }
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% endwith %}
+  </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a href="{{ url_for('index') }}" class="navbar-brand">
+    <span class="brand-icon">🏏</span>
+    Cricket<span class="brand-accent">AI</span>
+  </a>
+  <div class="nav-links">
+    <a href="{{ url_for('login') }}">Login</a>
+    <a href="{{ url_for('register') }}" class="btn btn-green btn-sm">Register</a>
+  </div>
+</nav>
+
+<div class="auth-page">
+  <div class="auth-box">
+
+    <div class="auth-logo">🏏 Cricket<span>AI</span></div>
+    <div class="auth-sub">Smart Shot Classification System</div>
+    <h2 class="auth-title">SIGN IN</h2>
+
+    <!-- Flash messages -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="error-msg">
+          {% if cat == 'success' %}✓{% elif cat == 'danger' %}✗{% else %}ℹ{% endif %}
+          {{ msg }}
+        </div>
+      {% endfor %}
+    {% endwith %}
+
+    <!-- Inline error from route -->
+    {% if error %}
+      <div class="error-msg">✗ {{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('login') }}" novalidate>
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input type="email" name="email" class="form-control"
+               placeholder="you@example.com"
+               value="{{ request.form.get('email','') }}" required/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" name="password" class="form-control"
+               placeholder="••••••••" required/>
+      </div>
+      <button type="submit" class="btn btn-green btn-block btn-lg" style="margin-top:.5rem;">
+        LOGIN →
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      Don't have an account? <a href="{{ url_for('register') }}">Register here</a>
+    </div>
+
+    <div class="demo-box">
+      <div class="demo-title">Demo Accounts</div>
+      <div class="demo-row"><span>Admin</span><code>admin@cricket.com / admin123</code></div>
+      <div class="demo-row"><span>Coach</span><code>coach@cricket.com / coach123</code></div>
+      <div class="demo-row"><span>Player</span><code>player@cricket.com / player123</code></div>
+    </div>
+
+  </div>
+</div>
+
+<footer class="footer">
+  🏏 <span class="footer-accent">CricketAI</span> — Smart Shot Classification
+</footer>
+
+</body>
+</html>

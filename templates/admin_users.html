@@ -1,0 +1,306 @@
+{% extends "base.html" %}
+{% block title %}Manage Users{% endblock %}
+
+{% block extra_css %}
+<style>
+  .info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+  @media(max-width:768px){ .info-grid { grid-template-columns:1fr; } }
+
+  /* Secret code display */
+  .secret-box {
+    background: rgba(0,200,83,.06);
+    border: 1px solid rgba(0,200,83,.25);
+    border-radius: var(--radius);
+    padding: 1.25rem 1.5rem;
+    margin-top: .75rem;
+  }
+  .secret-label {
+    font-size:.65rem; font-weight:800; letter-spacing:2px;
+    text-transform:uppercase; color:var(--text3); margin-bottom:.5rem;
+  }
+  .secret-code {
+    font-family: var(--font-mono);
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--green);
+    letter-spacing: 4px;
+  }
+  .secret-hint {
+    font-size:.75rem; color:var(--text3); margin-top:.5rem;
+  }
+
+  /* Coach code pill in table */
+  .coach-code-pill {
+    font-family: var(--font-mono);
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    background: rgba(255,193,7,.1);
+    color: var(--gold);
+    border: 1px solid rgba(255,193,7,.3);
+    border-radius: 20px;
+    padding: 2px 10px;
+    white-space: nowrap;
+  }
+
+  /* Single admin notice */
+  .admin-notice {
+    display: flex;
+    align-items: flex-start;
+    gap: .75rem;
+    background: rgba(255,193,7,.06);
+    border: 1px solid rgba(255,193,7,.2);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    font-size:.88rem;
+    color: var(--text2);
+    line-height: 1.6;
+  }
+  .admin-notice .notice-icon { font-size: 1.4rem; flex-shrink:0; margin-top:.1rem; }
+
+  .user-search-wrap { max-width: 280px; }
+
+  /* Role filter tabs */
+  .role-tabs {
+    display: flex;
+    gap: .5rem;
+    flex-wrap: wrap;
+    margin-bottom: 1rem;
+  }
+  .role-tab {
+    padding: .3rem .9rem;
+    border-radius: 20px;
+    font-size: .75rem;
+    font-weight: 700;
+    letter-spacing: .5px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text3);
+    transition: all .2s;
+  }
+  .role-tab.active, .role-tab:hover {
+    background: rgba(0,200,83,.1);
+    border-color: rgba(0,200,83,.35);
+    color: var(--green);
+  }
+  .role-tab[data-role="admin"].active  { background:rgba(255,23,68,.1); border-color:rgba(255,23,68,.35); color:#ff6b8a; }
+  .role-tab[data-role="coach"].active  { background:rgba(255,193,7,.1); border-color:rgba(255,193,7,.35); color:var(--gold); }
+  .role-tab[data-role="player"].active { background:rgba(0,200,83,.1);  border-color:rgba(0,200,83,.35);  color:var(--green); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="page-header fade-in">
+  <h1>MANAGE <span class="accent">USERS</span></h1>
+  <p class="subtitle">View all accounts, update roles and monitor coach IDs</p>
+</div>
+
+<!-- ── INFO PANELS ──────────────────────────────────────────── -->
+<div class="info-grid fade-in-2">
+
+  <!-- Coach secret code -->
+  <div class="card">
+    <div class="card-title">🔑 Coach Registration Code</div>
+    <p style="color:var(--text2);font-size:.88rem;margin-bottom:.5rem;">
+      Share this with coaches so they can self-register on the Register page.
+      Each coach gets a unique auto-generated ID (TCH-XXXX) upon registration.
+    </p>
+    <div class="secret-box">
+      <div class="secret-label">Current Secret Code</div>
+      <div class="secret-code">{{ coach_secret }}</div>
+      <div class="secret-hint">
+        Register page → Select "Coach" → Enter this code → Auto-assigned ID
+      </div>
+    </div>
+  </div>
+
+  <!-- Admin notice + coach list -->
+  <div class="card">
+    <div class="card-title">👑 Admin Access</div>
+    <div class="admin-notice">
+      <span class="notice-icon">ℹ️</span>
+      <div>
+        This system supports <strong style="color:var(--gold);">one Administrator</strong> account.
+        Admin credentials are set during database setup via <code style="color:var(--green);background:rgba(0,200,83,.08);padding:1px 6px;border-radius:4px;">database.py</code>.
+        Admin accounts are protected from deletion and role changes.
+      </div>
+    </div>
+    <div style="margin-top:1.25rem;">
+      <div class="card-title" style="font-size:.75rem;">🏅 Registered Coaches &amp; IDs</div>
+      {% if coaches %}
+        <div style="display:flex;flex-direction:column;gap:.5rem;">
+          {% for c in coaches %}
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .75rem;background:var(--bg3);border-radius:var(--radius);border:1px solid var(--border);">
+            <div>
+              <span style="font-weight:600;color:var(--text);">{{ c.full_name }}</span>
+              <span style="font-size:.78rem;color:var(--text3);margin-left:.5rem;">{{ c.email }}</span>
+            </div>
+            <span class="coach-code-pill">{{ c.coach_code or '—' }}</span>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p style="color:var(--text3);font-size:.88rem;padding:.5rem 0;">
+          No coaches registered yet.
+        </p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+
+<!-- ── STAT CARDS ───────────────────────────────────────────── -->
+<div class="stats-grid fade-in-3" style="grid-template-columns:repeat(4,1fr);margin-bottom:1.5rem;">
+  <div class="stat-card">
+    <div class="stat-label">Total Users</div>
+    <div class="stat-value">{{ users|length }}</div>
+  </div>
+  <div class="stat-card red">
+    <div class="stat-label">Admins</div>
+    <div class="stat-value" style="color:#ff6b8a;">
+      {{ users|selectattr('role','eq','admin')|list|length }}
+    </div>
+  </div>
+  <div class="stat-card gold">
+    <div class="stat-label">Coaches</div>
+    <div class="stat-value" style="color:var(--gold);">
+      {{ users|selectattr('role','eq','coach')|list|length }}
+    </div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Players</div>
+    <div class="stat-value" style="color:var(--green);">
+      {{ users|selectattr('role','eq','player')|list|length }}
+    </div>
+  </div>
+</div>
+
+<!-- ── USER TABLE ───────────────────────────────────────────── -->
+<div class="card fade-in-4">
+  <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:.75rem;">
+    <span>👥 All Users</span>
+    <input type="text" id="userSearch" class="form-control user-search-wrap"
+           placeholder="🔍  Search name or email…"/>
+  </div>
+
+  <!-- Role filter tabs -->
+  <div class="role-tabs">
+    <button class="role-tab active" data-role="all" onclick="filterRole('all',this)">All</button>
+    <button class="role-tab" data-role="admin"  onclick="filterRole('admin',this)">Admins</button>
+    <button class="role-tab" data-role="coach"  onclick="filterRole('coach',this)">Coaches</button>
+    <button class="role-tab" data-role="player" onclick="filterRole('player',this)">Players</button>
+  </div>
+
+  <div class="table-wrap">
+    <table id="usersTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Role</th>
+          <th>Coach ID</th>
+          <th>Registered</th>
+          <th>Change Role</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr data-role="{{ u.role }}">
+          <td class="text-mono" style="color:var(--text3);">{{ u.id }}</td>
+          <td><strong>{{ u.full_name }}</strong></td>
+          <td style="font-size:.85rem;color:var(--text2);">{{ u.email }}</td>
+          <td>
+            {% if u.role == 'admin' %}
+              <span class="badge badge-red">Admin</span>
+            {% elif u.role == 'coach' %}
+              <span class="badge badge-gold">Coach</span>
+            {% else %}
+              <span class="badge badge-green">Player</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.coach_code %}
+              <span class="coach-code-pill">{{ u.coach_code }}</span>
+            {% else %}
+              <span style="color:var(--text3);font-size:.8rem;">—</span>
+            {% endif %}
+          </td>
+          <td class="text-sm text-muted">
+            {{ u.created_at.strftime('%d %b %Y') if u.created_at else '—' }}
+          </td>
+          <td>
+            {% if u.role != 'admin' %}
+            <form method="POST" action="{{ url_for('admin_toggle_role', uid=u.id) }}"
+                  style="display:flex;gap:.4rem;align-items:center;">
+              <select name="role" class="form-control"
+                      style="width:auto;padding:.3rem .6rem;font-size:.8rem;">
+                <option value="player" {{ 'selected' if u.role=='player' }}>Player</option>
+                <option value="coach"  {{ 'selected' if u.role=='coach'  }}>Coach</option>
+              </select>
+              <button type="submit" class="btn btn-blue btn-sm">Save</button>
+            </form>
+            {% else %}
+              <span class="text-muted text-sm">Protected</span>
+            {% endif %}
+          </td>
+          <td>
+            {% if u.id != session['uid'] and u.role != 'admin' %}
+            <form method="POST" action="{{ url_for('admin_delete_user', uid=u.id) }}"
+                  onsubmit="return confirm('Delete {{ u.full_name }}? This cannot be undone.')">
+              <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+            </form>
+            {% else %}
+              <span class="text-muted text-sm">Protected</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="8" style="text-align:center;padding:2rem;color:var(--text3);">
+            No users found.
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── SEARCH ──────────────────────────────────────────────────
+const searchInput = document.getElementById('userSearch');
+searchInput.addEventListener('input', function () {
+  const q = this.value.toLowerCase();
+  document.querySelectorAll('#usersTable tbody tr[data-role]').forEach(row => {
+    const match = row.textContent.toLowerCase().includes(q);
+    row.style.display = match ? '' : 'none';
+  });
+});
+
+// ── ROLE FILTER TABS ────────────────────────────────────────
+let currentRole = 'all';
+function filterRole(role, btn) {
+  currentRole = role;
+  document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('#usersTable tbody tr[data-role]').forEach(row => {
+    row.style.display = (role === 'all' || row.dataset.role === role) ? '' : 'none';
+  });
+  // Reset search
+  searchInput.value = '';
+}
+</script>
+{% endblock %}

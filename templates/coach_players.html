@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}My Players{% endblock %}
+
+{% block content %}
+<div class="page-header fade-in">
+  <h1>MY <span>PLAYERS</span></h1>
+  <p>Assign players to your coaching roster and monitor them</p>
+</div>
+
+<div class="grid-2 fade-in-2">
+  <!-- Assign new player -->
+  <div class="card">
+    <div class="card-title">➕ Assign a Player</div>
+    {% if all_players %}
+      <form method="POST" action="{{ url_for('coach_assign_player') }}">
+        <div class="form-group">
+          <label class="form-label">Select Player</label>
+          <select name="player_id" class="form-control" required>
+            <option value="">— Choose player —</option>
+            {% for pl in all_players %}
+              <option value="{{ pl.id }}">{{ pl.full_name }} ({{ pl.email }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <button type="submit" class="btn btn-green">Assign Player</button>
+      </form>
+    {% else %}
+      <p style="color:var(--text3);">All players are already assigned or no players registered yet.</p>
+    {% endif %}
+  </div>
+
+  <!-- My players list -->
+  <div class="card">
+    <div class="card-title">👥 My Roster ({{ my_players|length }})</div>
+    {% if my_players %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Player</th><th>Shots</th><th>Actions</th></tr>
+          </thead>
+          <tbody>
+            {% for pl in my_players %}
+            <tr>
+              <td>
+                <strong>{{ pl.full_name }}</strong><br/>
+                <small style="color:var(--text3);font-size:.78rem;">{{ pl.email }}</small>
+              </td>
+              <td style="font-family:var(--font-mono);color:var(--green);">{{ pl.pred_count }}</td>
+              <td>
+                <a href="{{ url_for('coach_player_history', player_id=pl.id) }}"
+                   class="btn btn-blue btn-sm">History</a>
+                <form method="POST" action="{{ url_for('coach_remove_player', player_id=pl.id) }}"
+                      style="display:inline;" onsubmit="return confirm('Remove this player?')">
+                  <button type="submit" class="btn btn-danger btn-sm">Remove</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p style="color:var(--text3);">No players assigned yet.</p>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

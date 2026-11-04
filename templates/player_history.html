@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% block title %}My History{% endblock %}
+
+{% block content %}
+<div class="page-header fade-in">
+  <h1>MY <span>HISTORY</span></h1>
+  <p>All your shot classification predictions</p>
+</div>
+
+{% if preds %}
+<!-- Summary strip -->
+<div class="stats-grid fade-in-2" style="margin-bottom:1.5rem;">
+  {% set shot_counts = {} %}
+  {% for p in preds %}
+    {% if p.predicted_shot not in shot_counts %}
+      {% set _ = shot_counts.update({p.predicted_shot: 0}) %}
+    {% endif %}
+    {% set _ = shot_counts.update({p.predicted_shot: shot_counts[p.predicted_shot] + 1}) %}
+  {% endfor %}
+  {% for shot, cnt in shot_counts.items() %}
+    <div class="stat-card">
+      <div class="stat-label">{{ shot }}</div>
+      <div class="stat-value">{{ cnt }}</div>
+    </div>
+  {% endfor %}
+  <div class="stat-card gold">
+    <div class="stat-label">Total</div>
+    <div class="stat-value" style="color:var(--gold);">{{ preds|length }}</div>
+  </div>
+</div>
+{% endif %}
+
+<div class="card fade-in-3">
+  <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:.5rem;">
+    <span>🎯 Prediction Log</span>
+    <select id="filterShot" class="form-control" style="width:auto;padding:.3rem .8rem;font-size:.85rem;">
+      <option value="">All Shots</option>
+      <option value="Cover Drive">Cover Drive</option>
+      <option value="Pull Shot">Pull Shot</option>
+      <option value="Sweep">Sweep</option>
+      <option value="Defensive">Defensive</option>
+    </select>
+  </div>
+
+  {% if preds %}
+    <div class="table-wrap">
+      <table id="histTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Shot</th>
+            <th>Confidence</th>
+            <th>Model</th>
+            <th>DT</th>
+            <th>RF</th>
+            <th>SVM</th>
+            <th>KNN</th>
+            <th>Max Magnitude</th>
+            <th>Peak Gyro</th>
+            <th>Date</th>
+            <th>Del</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in preds %}
+          <tr data-shot="{{ p.predicted_shot }}">
+            <td class="mono">{{ loop.index }}</td>
+            <td>
+              {% set sc = 'shot-cover' if 'Cover' in p.predicted_shot else
+                          'shot-pull'  if 'Pull'  in p.predicted_shot else
+                          'shot-sweep' if 'Sweep' in p.predicted_shot else 'shot-def' %}
+              <span class="badge {{ sc }}">{{ p.predicted_shot }}</span>
+            </td>
+            <td style="font-family:var(--font-mono);color:var(--green);font-weight:700;">
+              {{ "%.1f"|format(p.confidence) }}%
+            </td>
+            <td class="mono" style="font-size:.8rem;">{{ p.model_used }}</td>
+            {% for pred in [p.dt_prediction, p.rf_prediction, p.svm_prediction, p.knn_prediction] %}
+              <td>
+                {% if pred %}
+                  {% set sc2 = 'shot-cover' if 'Cover' in pred else
+                               'shot-pull'  if 'Pull'  in pred else
+                               'shot-sweep' if 'Sweep' in pred else 'shot-def' %}
+                  <span class="badge {{ sc2 }}" style="font-size:.65rem;">{{ pred[:4] }}</span>
+                {% else %}—{% endif %}
+              </td>
+            {% endfor %}
+            <td class="mono">{{ "%.2f"|format(p.max_acc_magnitude) }}</td>
+            <td class="mono">{{ "%.2f"|format(p.peak_angular_vel) }}</td>
+            <td style="font-size:.78rem;color:var(--text3);">
+              {{ p.created_at.strftime('%d %b %Y<br/>%H:%M') | safe if p.created_at else '—' }}
+            </td>
+            <td>
+              <form method="POST" action="{{ url_for('player_delete_prediction', pid=p.id) }}"
+                    onsubmit="return confirm('Delete this prediction?')">
+                <button type="submit" class="btn btn-danger btn-sm">✕</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div style="text-align:center;padding:3rem;color:var(--text3);">
+      <div style="font-size:3rem;margin-bottom:1rem;">🏏</div>
+      <p>No predictions yet.</p>
+      <a href="{{ url_for('player_classify') }}" class="btn btn-green" style="margin-top:1rem;">
+        Classify Your First Shot
+      </a>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('filterShot').addEventListener('change', function(){
+  const val = this.value;
+  document.querySelectorAll('#histTable tbody tr[data-shot]').forEach(row => {
+    row.style.display = (!val || row.dataset.shot === val) ? '' : 'none';
+  });
+});
+</script>
+{% endblock %}

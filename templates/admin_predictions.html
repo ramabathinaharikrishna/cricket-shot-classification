@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+{% block title %}All Predictions{% endblock %}
+
+{% block content %}
+<div class="page-header fade-in">
+  <h1>ALL <span>PREDICTIONS</span></h1>
+  <p>Complete prediction log across all players</p>
+</div>
+
+<div class="card fade-in-2">
+  <div class="card-title" style="justify-content:space-between;flex-wrap:wrap;gap:.5rem;">
+    <span>🎯 Prediction Log <span style="color:var(--text3);font-size:.8rem;">({{ preds|length }} total)</span></span>
+    <!-- Filter by shot -->
+    <select id="filterShot" class="form-control" style="width:auto;padding:.3rem .8rem;font-size:.85rem;">
+      <option value="">All Shots</option>
+      <option value="Cover Drive">Cover Drive</option>
+      <option value="Pull Shot">Pull Shot</option>
+      <option value="Sweep">Sweep</option>
+      <option value="Defensive">Defensive</option>
+    </select>
+  </div>
+  <div class="table-wrap">
+    <table id="predsTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Player</th>
+          <th>Shot</th>
+          <th>Confidence</th>
+          <th>Model</th>
+          <th>DT</th>
+          <th>RF</th>
+          <th>SVM</th>
+          <th>KNN</th>
+          <th>Date</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in preds %}
+        <tr data-shot="{{ p.predicted_shot }}">
+          <td class="mono">{{ p.id }}</td>
+          <td><strong>{{ p.full_name }}</strong><br/><small style="color:var(--text3);">{{ p.email }}</small></td>
+          <td>
+            {% set sc = 'shot-cover' if 'Cover' in p.predicted_shot else
+                        'shot-pull'  if 'Pull'  in p.predicted_shot else
+                        'shot-sweep' if 'Sweep' in p.predicted_shot else 'shot-def' %}
+            <span class="badge {{ sc }}">{{ p.predicted_shot }}</span>
+          </td>
+          <td style="font-family:var(--font-mono);color:var(--green);font-weight:700;">
+            {{ "%.1f"|format(p.confidence) }}%
+          </td>
+          <td class="mono" style="font-size:.8rem;">{{ p.model_used }}</td>
+          <td>
+            {% if p.dt_prediction %}
+              {% set sc2 = 'shot-cover' if 'Cover' in p.dt_prediction else
+                           'shot-pull'  if 'Pull'  in p.dt_prediction else
+                           'shot-sweep' if 'Sweep' in p.dt_prediction else 'shot-def' %}
+              <span class="badge {{ sc2 }}" style="font-size:.65rem;">{{ p.dt_prediction[:4] }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if p.rf_prediction %}
+              {% set sc3 = 'shot-cover' if 'Cover' in p.rf_prediction else
+                           'shot-pull'  if 'Pull'  in p.rf_prediction else
+                           'shot-sweep' if 'Sweep' in p.rf_prediction else 'shot-def' %}
+              <span class="badge {{ sc3 }}" style="font-size:.65rem;">{{ p.rf_prediction[:4] }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if p.svm_prediction %}
+              {% set sc4 = 'shot-cover' if 'Cover' in p.svm_prediction else
+                           'shot-pull'  if 'Pull'  in p.svm_prediction else
+                           'shot-sweep' if 'Sweep' in p.svm_prediction else 'shot-def' %}
+              <span class="badge {{ sc4 }}" style="font-size:.65rem;">{{ p.svm_prediction[:4] }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td>
+            {% if p.knn_prediction %}
+              {% set sc5 = 'shot-cover' if 'Cover' in p.knn_prediction else
+                           'shot-pull'  if 'Pull'  in p.knn_prediction else
+                           'shot-sweep' if 'Sweep' in p.knn_prediction else 'shot-def' %}
+              <span class="badge {{ sc5 }}" style="font-size:.65rem;">{{ p.knn_prediction[:4] }}</span>
+            {% else %}—{% endif %}
+          </td>
+          <td style="font-size:.78rem;color:var(--text3);">
+            {{ p.created_at.strftime('%d %b %Y<br/>%H:%M') | safe if p.created_at else '—' }}
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="10" style="text-align:center;color:var(--text3);padding:2rem;">No predictions yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.getElementById('filterShot').addEventListener('change', function(){
+  const val = this.value;
+  document.querySelectorAll('#predsTable tbody tr[data-shot]').forEach(row => {
+    row.style.display = (!val || row.dataset.shot === val) ? '' : 'none';
+  });
+});
+</script>
+{% endblock %}

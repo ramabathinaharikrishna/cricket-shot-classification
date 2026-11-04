@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Coach Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+  .chart-wrap { position:relative; height:260px; width:100%; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header fade-in">
+  <h1>COACH <span class="accent">DASHBOARD</span></h1>
+  <p class="subtitle">Monitor your players' shot classification performance</p>
+</div>
+
+<div class="stats-grid fade-in-2" style="grid-template-columns:repeat(3,1fr);max-width:540px;margin-bottom:1.5rem;">
+  <div class="stat-card">
+    <div class="stat-label">My Players</div>
+    <div class="stat-value">{{ my_players|length }}</div>
+  </div>
+  <div class="stat-card gold">
+    <div class="stat-label">Total Shots</div>
+    <div class="stat-value" style="color:var(--gold);">{{ total_preds }}</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-label">Shot Types</div>
+    <div class="stat-value" style="color:var(--green);">{{ shot_dist|length }}</div>
+  </div>
+</div>
+
+<div class="grid-2 fade-in-3">
+
+  <!-- Shot Distribution -->
+  <div class="card">
+    <div class="card-title">🏏 Players' Shot Distribution</div>
+    {% if shot_dist %}
+      <div class="chart-wrap">
+        <canvas id="shotChart"></canvas>
+      </div>
+    {% else %}
+      <div style="height:260px;display:flex;align-items:center;justify-content:center;color:var(--text3);flex-direction:column;gap:.5rem;">
+        <span style="font-size:2rem;">📊</span>
+        <span>No predictions from your players yet</span>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Player Roster -->
+  <div class="card">
+    <div class="card-title">👥 Player Roster</div>
+    {% if my_players %}
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Player</th><th>Shots</th><th>Last Active</th><th></th></tr>
+          </thead>
+          <tbody>
+            {% for pl in my_players %}
+            <tr>
+              <td>
+                <strong>{{ pl.full_name }}</strong><br/>
+                <small class="text-muted text-sm">{{ pl.email }}</small>
+              </td>
+              <td style="font-family:var(--font-mono);color:var(--green);font-weight:700;">
+                {{ pl.pred_count }}
+              </td>
+              <td class="text-sm text-muted">
+                {{ pl.last_active.strftime('%d %b') if pl.last_active else 'Never' }}
+              </td>
+              <td>
+                <a href="{{ url_for('coach_player_history', player_id=pl.id) }}"
+                   class="btn btn-outline btn-sm">View</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div style="padding:2rem;color:var(--text3);text-align:center;">
+        <p>No players assigned yet.</p>
+        <a href="{{ url_for('coach_players') }}" class="btn btn-green btn-sm mt-2">
+          Assign Players →
+        </a>
+      </div>
+    {% endif %}
+    <div style="margin-top:1rem;">
+      <a href="{{ url_for('coach_players') }}" class="btn btn-green btn-sm">Manage Players</a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if shot_dist %}
+<script>
+const sd = {{ shot_dist | tojson }};
+new Chart(document.getElementById('shotChart'), {
+  type: 'doughnut',
+  data: {
+    labels: sd.map(s => s.predicted_shot),
+    datasets:[{
+      data: sd.map(s => s.cnt),
+      backgroundColor: ['#00c853','#ff1744','#ffc107','#2979ff'],
+      borderColor: '#141929', borderWidth:3, hoverOffset:8
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position:'bottom',
+        labels:{ color:'#9ea8c5', padding:14, font:{family:'Rajdhani',weight:'600'} }
+      }
+    },
+    cutout:'60%'
+  }
+});
+</script>
+{% endif %}
+{% endblock %}

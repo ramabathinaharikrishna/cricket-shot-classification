@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Player Dashboard{% endblock %}
+
+{% block extra_css %}
+<style>
+  .chart-wrap { position:relative; height:240px; width:100%; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header fade-in">
+  <h1>WELCOME, <span class="accent">{{ session.user_name.upper().split()[0] }}</span></h1>
+  <p class="subtitle">Your cricket shot analysis overview</p>
+</div>
+
+<!-- STATS -->
+<div class="stats-grid fade-in-2">
+  <div class="stat-card">
+    <div class="stat-label">Total Shots Classified</div>
+    <div class="stat-value" style="color:var(--green);">{{ total_shots }}</div>
+  </div>
+  <div class="stat-card gold">
+    <div class="stat-label">Most Played Shot</div>
+    <div class="stat-value" style="color:var(--gold);font-size:1.4rem;">
+      {% if shot_dist %}{{ shot_dist[0].predicted_shot.split()[0] }}{% else %}—{% endif %}
+    </div>
+  </div>
+  <div class="stat-card blue">
+    <div class="stat-label">Last Analysis</div>
+    <div class="stat-value" style="color:var(--blue);font-size:1.6rem;">
+      {% if recent %}{{ recent[0].created_at.strftime('%d %b') if recent[0].created_at else '—' }}{% else %}—{% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="grid-2 fade-in-3 mb-3">
+
+  <!-- Shot Distribution -->
+  <div class="card">
+    <div class="card-title">🏏 My Shot Distribution</div>
+    {% if shot_dist %}
+      <div class="chart-wrap">
+        <canvas id="myShots"></canvas>
+      </div>
+    {% else %}
+      <div style="height:240px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;color:var(--text3);">
+        <span style="font-size:3rem;">🏏</span>
+        <p>No shots classified yet.</p>
+        <a href="{{ url_for('player_classify') }}" class="btn btn-green btn-sm">
+          Classify First Shot
+        </a>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Quick Actions + Breakdown -->
+  <div class="card">
+    <div class="card-title">⚡ Quick Actions</div>
+    <div style="display:flex;flex-direction:column;gap:.75rem;margin-bottom:1.25rem;">
+      <a href="{{ url_for('player_classify') }}" class="btn btn-green"
+         style="justify-content:center;padding:1rem;">
+        🏏 &nbsp; CLASSIFY A SHOT
+      </a>
+      <a href="{{ url_for('player_history') }}" class="btn btn-outline"
+         style="justify-content:center;padding:1rem;">
+        📋 &nbsp; VIEW FULL HISTORY
+      </a>
+    </div>
+
+    {% if shot_dist %}
+    <div class="divider"></div>
+    <div class="card-title">Shot Breakdown</div>
+    {% for s in shot_dist %}
+      {% set pct = (s.cnt / total_shots * 100)|round(1) if total_shots > 0 else 0 %}
+      {% set color = 'var(--green)' if 'Cover' in s.predicted_shot else
+                     'var(--red)'   if 'Pull'  in s.predicted_shot else
+                     'var(--gold)'  if 'Sweep' in s.predicted_shot else 'var(--blue)' %}
+      <div style="margin-bottom:.75rem;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:.3rem;">
+          <span style="font-size:.85rem;font-weight:600;">{{ s.predicted_shot }}</span>
+          <span style="font-size:.8rem;font-family:var(--font-mono);color:{{ color }};">
+            {{ s.cnt }} ({{ pct }}%)
+          </span>
+        </div>
+        <div class="prog-bar-wrap">
+          <div class="prog-bar" style="width:{{ pct }}%;background:{{ color }};"></div>
+        </div>
+      </div>
+    {% endfor %}
+    {% endif %}
+  </div>
+
+</div>
+
+<!-- Recent Activity -->
+<div class="card fade-in-4">
+  <div class="card-title">📋 Recent Activity</div>
+  {% if recent %}
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Shot</th><th>Confidence</th><th>Model Used</th><th>Date</th></tr>
+        </thead>
+        <tbody>
+          {% for p in recent %}
+          <tr>
+            <td>
+              {% set sc = 'shot-cover' if 'Cover' in p.predicted_shot else
+                          'shot-pull'  if 'Pull'  in p.predicted_shot else
+                          'shot-sweep' if 'Sweep' in p.predicted_shot else 'shot-def' %}
+              <span class="badge {{ sc }}">{{ p.predicted_shot }}</span>
+            </td>
+            <td style="font-family:var(--font-mono);color:var(--green);font-weight:700;">
+              {{ "%.1f"|format(p.confidence) }}%
+            </td>
+            <td class="text-mono text-sm">{{ p.model_used }}</td>
+            <td class="text-sm text-muted">
+              {{ p.created_at.strftime('%d %b %Y %H:%M') if p.created_at else '—' }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div style="margin-top:1rem;">
+      <a href="{{ url_for('player_history') }}" class="btn btn-outline btn-sm">View All →</a>
+    </div>
+  {% else %}
+    <p style="color:var(--text3);padding:1rem;">No shots classified yet.</p>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if shot_dist %}
+<script>
+const sd = {{ shot_dist | tojson }};
+new Chart(document.getElementById('myShots'), {
+  type: 'polarArea',
+  data: {
+    labels: sd.map(s => s.predicted_shot),
+    datasets:[{
+      data: sd.map(s => s.cnt),
+      backgroundColor: ['rgba(0,200,83,.6)','rgba(255,23,68,.6)','rgba(255,193,7,.6)','rgba(41,121,255,.6)'],
+      borderColor:     ['#00c853','#ff1744','#ffc107','#2979ff'],
+      borderWidth: 2
+    }]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+        position:'bottom',
+        labels:{ color:'#9ea8c5', padding:14, font:{family:'Rajdhani',weight:'600'} }
+      }
+    },
+    scales: {
+      r: {
+        ticks:{ color:'#5a6480', backdropColor:'transparent',
+                font:{family:'Rajdhani'} },
+        grid:{ color:'rgba(30,42,64,.9)' }
+      }
+    }
+  }
+});
+</script>
+{% endif %}
+{% endblock %}

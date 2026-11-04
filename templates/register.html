@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Register — CricketAI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}"/>
+  <style>
+    body { display:flex; flex-direction:column; min-height:100vh; }
+    .auth-page {
+      flex:1;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:2rem;
+    }
+    .auth-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 2.5rem;
+      width: 100%;
+      max-width: 460px;
+      animation: fadeUp .4s ease;
+      box-shadow: 0 4px 32px rgba(0,0,0,.4);
+    }
+    .auth-logo { font-family:var(--font-head); font-size:1.9rem; letter-spacing:2px; color:var(--green); text-align:center; margin-bottom:.25rem; }
+    .auth-logo span { color:var(--gold); }
+    .auth-sub { text-align:center; color:var(--text3); font-size:.82rem; letter-spacing:1px; text-transform:uppercase; margin-bottom:2rem; }
+    .auth-title { font-family:var(--font-head); font-size:1.5rem; letter-spacing:1.5px; text-align:center; margin-bottom:1.5rem; color:var(--text); }
+    .auth-footer { text-align:center; color:var(--text3); font-size:.88rem; margin-top:1.25rem; }
+    .auth-footer a { color:var(--green); font-weight:600; text-decoration:none; }
+    .error-msg {
+      background:rgba(255,23,68,.08); border:1px solid rgba(255,23,68,.3);
+      border-radius:var(--radius); color:#ff6b8a; padding:.75rem 1rem;
+      font-size:.88rem; font-weight:600; margin-bottom:1.25rem;
+      display:flex; align-items:center; gap:.5rem;
+    }
+    .role-grid { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; margin-bottom:1.2rem; }
+    .role-radio { display:none; }
+    .role-label {
+      display:flex; flex-direction:column; align-items:center; gap:.3rem;
+      padding:1rem; background:var(--bg3); border:2px solid var(--border);
+      border-radius:var(--radius); cursor:pointer; transition:all .2s; text-align:center;
+    }
+    .role-label .ri { font-size:1.6rem; }
+    .role-label .rn { font-family:var(--font-head); font-size:.95rem; letter-spacing:1px; color:var(--text); }
+    .role-label .rd { font-size:.7rem; color:var(--text3); }
+    .role-radio:checked + .role-label { border-color:var(--green); background:rgba(0,200,83,.08); box-shadow:0 0 0 3px rgba(0,200,83,.15); }
+    #secretWrap { display:none; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar">
+  <a href="{{ url_for('index') }}" class="navbar-brand">
+    <span class="brand-icon">🏏</span>Cricket<span class="brand-accent">AI</span>
+  </a>
+  <div class="nav-links">
+    <a href="{{ url_for('login') }}">Login</a>
+    <a href="{{ url_for('register') }}" class="btn btn-green btn-sm">Register</a>
+  </div>
+</nav>
+
+<div class="auth-page">
+  <div class="auth-box">
+    <div class="auth-logo">🏏 Cricket<span>AI</span></div>
+    <div class="auth-sub">Create Your Account</div>
+    <h2 class="auth-title">REGISTER</h2>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for cat, msg in messages %}
+        <div class="error-msg">{{ '✓' if cat=='success' else '✗' }} {{ msg }}</div>
+      {% endfor %}
+    {% endwith %}
+
+    {% if error %}
+      <div class="error-msg">✗ {{ error }}</div>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('register') }}" novalidate>
+
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input type="text" name="full_name" class="form-control"
+               placeholder="Your full name"
+               value="{{ request.form.get('full_name','') }}" required/>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Email Address</label>
+        <input type="email" name="email" class="form-control"
+               placeholder="you@example.com"
+               value="{{ request.form.get('email','') }}" required/>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Select Role</label>
+        <div class="role-grid">
+          <div>
+            <input type="radio" name="role" value="player"
+                   id="r_player" class="role-radio" checked/>
+            <label for="r_player" class="role-label">
+              <span class="ri">🏏</span>
+              <span class="rn">Player</span>
+              <span class="rd">Classify shots</span>
+            </label>
+          </div>
+          <div>
+            <input type="radio" name="role" value="coach"
+                   id="r_coach" class="role-radio"/>
+            <label for="r_coach" class="role-label">
+              <span class="ri">👨‍🏫</span>
+              <span class="rn">Coach</span>
+              <span class="rd">Monitor players</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group" id="secretWrap">
+        <label class="form-label">Coach Secret Code</label>
+        <input type="text" name="secret_code" class="form-control"
+               placeholder="Enter secret code"/>
+        <p class="form-hint">Ask admin for the code. (Default: COACH2024)</p>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Password</label>
+        <input type="password" name="password" class="form-control"
+               placeholder="Minimum 6 characters" required/>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Confirm Password</label>
+        <input type="password" name="confirm_password" class="form-control"
+               placeholder="Repeat password" required/>
+      </div>
+
+      <button type="submit" class="btn btn-green btn-block btn-lg" style="margin-top:.5rem;">
+        CREATE ACCOUNT →
+      </button>
+    </form>
+
+    <div class="auth-footer">
+      Already have an account? <a href="{{ url_for('login') }}">Sign in</a>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  🏏 <span class="footer-accent">CricketAI</span> — Smart Shot Classification
+</footer>
+
+<script>
+  document.getElementById('r_coach').addEventListener('change', function(){
+    document.getElementById('secretWrap').style.display = this.checked ? 'block' : 'none';
+  });
+  document.getElementById('r_player').addEventListener('change', function(){
+    document.getElementById('secretWrap').style.display = 'none';
+  });
+</script>
+</body>
+</html>
