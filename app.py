@@ -10,7 +10,7 @@ import mysql.connector
 from mysql.connector import Error
 
 app = Flask(__name__)
-app.secret_key = "cricket_shot_secret_2024_xK9pL#mQ"
+app.secret_key = os.environ.get("SECRET_KEY", "dev-only-change-me")
 app.config["PERMANENT_SESSION_LIFETIME"] = 86400
 app.config["SESSION_COOKIE_SAMESITE"]    = "Lax"
 app.config["SESSION_COOKIE_HTTPONLY"]    = True
@@ -519,4 +519,4 @@ def server_error(e):
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5000)
+    app.run(debug=False, port=5000)
