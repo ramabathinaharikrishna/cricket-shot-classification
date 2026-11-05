@@ -7,6 +7,11 @@ application** with separate dashboards for players, coaches and admins.
 It is designed for academies, schools and amateur players who cannot afford
 camera-based analytics or expensive motion-capture setups: only a bat-mounted
 low-cost motion sensor is needed.
+## Screenshots
+![Login](screenshots/login.png)
+![Classify](screenshots/classify.png)
+![Admin Dashboard](screenshots/dashboard.png)
+![History](screenshots/history.png)
 
 ---
 
